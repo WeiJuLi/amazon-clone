@@ -13,15 +13,21 @@ import { doc, setDoc, collection } from "firebase/firestore";
 function Payment() {
   const history = useNavigate();
   const [{ basket, user }, dispatch] = useStateValue();
-  const stripe = useStripe();
-  const elements = useElements();
+
+  const stripe = useStripe(); //This gets the reference of stripe instance that passes into the <Element></Element>
+  const elements = useElements(); //This gets the reference of Element instance
+
   const [error, setError] = useState(null);
+
+  //They control the status(disabled, processing, succeeded) of the Buy Now button.
   const [disabled, setDisabled] = useState(true);
   const [processing, setProcessing] = useState("");
   const [succeeded, setSucceeded] = useState(false);
+
+  //cilentSecret
   const [clientSecret, setCilentSecret] = useState(true);
 
-  // What is this ?
+  //
   useEffect(() => {
     const getClientSecret = async () => {
       const response = await axios({
@@ -42,22 +48,35 @@ function Payment() {
     e.preventDefault();
     setProcessing(true); //disable the subnit button
 
-    const payload = await stripe
-      .confirmCardPayment(clientSecret, {
+    try {
+      const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement),
         },
-      })
-      .then(async ({ paymentIntent }) => {
-        //paymentIntent = payment confirmation
+      });
 
-        //push items in the basket to the firebase database
-        await setDoc(doc(collection(db, "users", user?.uid, "orders"), paymentIntent.id),
+      if (result.error) {
+        // If we got error from the return promise of stripe.confirmCardPayment()
+        console.error(
+          "stripe.confirmCardPayment() failed:",
+          result.error.message
+        );
+        setError(result.error.message);
+        setProcessing(false);
+      } else if (result.paymentIntent) {
+        // If the payment is successful
+        const { paymentIntent } = result;
+        console.log("PaymentIntent object:", paymentIntent);
+
+        // Push items in the basket to the Firebase database
+        await setDoc(
+          doc(collection(db, "users", user?.uid, "orders"), paymentIntent.id),
           {
             basket: basket,
             amount: paymentIntent.amount,
             created: paymentIntent.created,
-          })
+          }
+        )
           .then(() => console.log("Firestore write successful"))
           .catch((error) => {
             console.error("Firestore write error:", error); // Log any Firestore error
@@ -73,16 +92,22 @@ function Payment() {
         });
 
         history("/orders", { replace: true });
-      });
+      }
+    } catch (error) {
+      // Catch other unintended errors
+
+      console.error("Unexpected error:", error);
+      setError("An unexpected error occurred. Please try again.");
+      setProcessing(false);
+    }
   };
 
   const handleChange = (e) => {
     // Listen for changes in the CardElement
     // and display any errors as the customer types their card details
-    setDisabled(e.empty); //?
+    setDisabled(e.empty); //If there is no card number, the Buy Now button will be disabled.
     setError(e.errr ? e.error.message : "");
   };
-
   return (
     <div className="payment">
       <div className="payment_container">
@@ -127,7 +152,7 @@ function Payment() {
             <h3>Payment Method</h3>
           </div>
           <div className="payment_details">
-            {/* Stripe magic will go */}
+            {/* Stripe Part */}
             <form onSubmit={handleSubmit}>
               <CardElement onChange={handleChange} />
               <div className="payment_priceCOntainer">

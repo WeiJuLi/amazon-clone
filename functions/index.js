@@ -42,3 +42,5 @@ exports.api = onRequest(app);
 // Example Endpoint
 // http://127.0.0.1:5001/challenge-9eca5/us-central1/api
 // npm run lint -- --fix
+
+// firebase emulators:start
