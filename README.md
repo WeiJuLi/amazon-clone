@@ -9,7 +9,7 @@ A full-stack e-commerce platform inspired by Amazon, built with React, Firebase,
 - Responsive design.
 
 ## Demo
-![Demo](public/images/Amazon-full-stack-ezgif.com-optimize.gif)
+![Demo](public/images/Amazon-clone-demo.gif)
 
 ## Tech Stack
 - **Frontend**: React
